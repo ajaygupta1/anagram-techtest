@@ -1,6 +1,5 @@
 package com.global.commtech.test.anagramfinder;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
-@RequiredArgsConstructor
 public class AnagramFinder {
 
     public void find(String filePath) {
@@ -24,14 +22,11 @@ public class AnagramFinder {
 
         List<String> anagramGroupList = new ArrayList<>();
         try (Stream<String> stream = Files.lines(Paths.get(filePath))) {
-            stream.forEach(wordOnFocus -> {
-                boolean  isGrouped = isWordAlreadyGrouped(anagramGroupList, wordOnFocus);
-                if(!isGrouped){
-                    List<String> anagrams = findAnagrams(wordOnFocus, filePath);
-                    String records = convertToDelimitedString(anagrams);
-                    anagramGroupList.add(records);
-                }
-            });
+            stream.filter(wordOnFocus -> !isWordAlreadyGrouped(anagramGroupList, wordOnFocus))
+                    .map(wordOnFocus -> findAnagrams(wordOnFocus, filePath))
+                    .map(anagrams -> convertToDelimitedString(anagrams))
+                    .forEach(delimitedStrOfAnagrams -> anagramGroupList.add(delimitedStrOfAnagrams));
+
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -44,21 +39,15 @@ public class AnagramFinder {
     }
 
     private List<String> findAnagrams(String inputWord, String filePath) {
-        final List<String> anagrams = new ArrayList<>();
         //Read the file again
         try (Stream<String> stream = Files.lines(Paths.get(filePath))) {
-            stream
-                .filter(wordToCompare -> wordToCompare.length() == inputWord.length())
-                .forEach(wordToCompare -> {
-                    boolean allMatch = compareWordContentByEachCharacter(inputWord, wordToCompare);
-                    if (allMatch) {
-                        anagrams.add(wordToCompare);
-                    }
-                });
+            return stream.filter(wordToCompare -> wordToCompare.length() == inputWord.length())
+                    .filter(wordToCompare -> compareWordContentByEachCharacter(inputWord, wordToCompare))
+                    .distinct()
+                    .collect(Collectors.toList());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        return anagrams.stream().distinct().collect(Collectors.toList());
     }
 
     private boolean compareWordContentByEachCharacter(String first, String second) {
@@ -74,5 +63,4 @@ public class AnagramFinder {
     private void printOutput(List<String> list) {
         list.forEach(System.out::println);
     }
-
 }
